@@ -41,17 +41,20 @@ describe('sass', function () {
             ]).resources;
         });
 
-        it('should return a single resource with a CSS filename', function(done){
+        it('should return the input SCSS resource with dependencies', function(done){
             completeWithResources(transformedResources, function(resources) {
-                resources.length.should.equal(1);
-                resources[0].filename().should.equal('main.css');
+                resources.length.should.equal(3);
+                resources[0].filename().should.equal('main.scss');
+                resources[1].filename().should.equal('other.scss');
+                resources[2].filename().should.equal('helper.scss');
             }, resourcesError, done);
         });
 
-        it('should return a resource with CSS data', function(done){
-            var outputMain = fs.readFileSync('test/fixtures/output-main.css').toString();
+        it('should return data for the input SCSS resource with dependencies', function(done){
             completeWithResources(transformedResources, function(resources) {
-                resources[0].data().should.equal(outputMain);
+                resources[0].data().should.equal(fs.readFileSync('test/fixtures/main.scss').toString());
+                resources[1].data().should.equal(fs.readFileSync('test/fixtures/other.scss').toString());
+                resources[2].data().should.equal(fs.readFileSync('test/fixtures/sub/helper.scss').toString());
             }, resourcesError, done);
         });
     });

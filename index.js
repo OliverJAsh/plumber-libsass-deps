@@ -3,6 +3,7 @@ var operation = plumber.operation;
 var Report = plumber.Report;
 var Rx = plumber.Rx;
 
+var fs = require('fs');
 var extend = require('extend');
 var sass = require('node-sass');
 var path = require('path');
@@ -11,26 +12,33 @@ module.exports = function (options) {
     options = options || {};
 
     return operation(function (resources) {
-        return resources.flatMap (function(resource) {
-            // TODO: map extra options (filename, paths, etc)?
-            var compiledCss = resource.withType('css');
-
+        return resources.flatMap(function(resource) {
             return Rx.Observable.create(function(observer) {
                 var resourcePath = resource.path();
                 var stats = {};
                 try {
-                    var data = sass.renderSync(extend({}, options, {
+                    // We don't care about the output for the purposes of this task.
+                    sass.renderSync(extend({}, options, {
                         data: resource.data(),
                         includePaths: resourcePath && [path.dirname(resourcePath.absolute())],
+                        // node-sass mutates this object. Not pretty!
                         stats: stats
                     }));
-                    observer.onNext(data);
+                    observer.onNext(stats);
                     observer.onCompleted();
                 } catch (error) {
                     observer.onError(error);
                 }
-            }).map(function(out) {
-                return compiledCss.withData(out);
+            }).flatMap(function (stats) {
+                var depResources = stats.includedFiles.map(function (relativePath) {
+                    var absolutePath = path.join(__dirname, relativePath);
+                    return new plumber.Resource({
+                        path: absolutePath,
+                        type: 'scss',
+                        rawData: fs.readFileSync(absolutePath)
+                    });
+                });
+                return Rx.Observable.fromArray([resource.withType('scss')].concat(depResources));
             }).catch(function(error) {
                 // TODO: Get more error info from node-sass somehow. Parse error
                 // error: String
