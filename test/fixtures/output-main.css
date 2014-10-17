@@ -1,0 +1,11 @@
+@import url(plain.css);
+.other {
+  float: left; }
+  .other .nested {
+    padding: 10px; }
+
+.parent .child {
+  font-size: 10px; }
+
+body {
+  margin: 0; }
