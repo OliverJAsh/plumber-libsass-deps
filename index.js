@@ -30,15 +30,8 @@ module.exports = function (options) {
                     observer.onError(error);
                 }
             }).flatMap(function (stats) {
-                var depResources = stats.includedFiles.map(function (relativePath) {
-                    var absolutePath = path.join(__dirname, relativePath);
-                    return new plumber.Resource({
-                        path: absolutePath,
-                        type: 'scss',
-                        rawData: fs.readFileSync(absolutePath)
-                    });
-                });
-                return Rx.Observable.fromArray([resource.withType('scss')].concat(depResources));
+                return Rx.Observable.return(resource.withType('scss'))
+                    .concat(globResources(stats.includedFiles));
             }).catch(function(error) {
                 // TODO: Get more error info from node-sass somehow. Parse error
                 // error: String
@@ -56,3 +49,16 @@ module.exports = function (options) {
         });
     });
 };
+
+// FIXME: do we really need the supervisor then?
+var Supervisor = plumber.Supervisor;
+var supervisor = new Supervisor();
+// TODO: glob here, though how to make Resource from data?
+var glob = supervisor.glob.bind(supervisor);
+
+// TOOD: Abstract
+function globResources(paths) {
+    return Rx.Observable.fromArray(paths).
+        map(glob).
+        mergeAll();
+}
